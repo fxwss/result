@@ -31,7 +31,10 @@ export function result<E, T>(value: T, error: E | null) {
   });
 }
 
-export const Result = {
+export const Result: {
+  create: typeof create;
+  _: typeof result;
+} & typeof operators = {
   create,
   _: result,
   ...operators,

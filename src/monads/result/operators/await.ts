@@ -11,7 +11,11 @@ const asPromise = <T>(promiseOrFn: PromiseOrFn<T>): Promise<T> => {
   return promiseOrFn;
 };
 
-export const await_ = async <E, T>(promiseOrFn: PromiseOrFn<T>) =>
+export const await_: <E, T>(
+  promiseOrFn: PromiseOrFn<T>
+) => Promise<import("../implementation").Result<E, T>> = async <E, T>(
+  promiseOrFn: PromiseOrFn<T>
+) =>
   asPromise(promiseOrFn)
     .then((r) => ok<E, T>(r))
     .catch((e) => err<E, T>(e));

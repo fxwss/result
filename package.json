@@ -1,9 +1,44 @@
 {
-  "name": "result",
-  "module": "index.ts",
+  "name": "@fxwss/result",
+  "version": "1.0.0",
+  "description": "A TypeScript Result monad library for error handling",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "package.json"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "test": "bun test",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "result",
+    "monad",
+    "error-handling",
+    "typescript",
+    "functional-programming"
+  ],
+  "author": "fxwss",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fxwss/result.git"
+  },
   "type": "module",
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "tsup": "^8.5.0"
   },
   "peerDependencies": {
     "typescript": "^5"

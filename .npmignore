@@ -1,0 +1,23 @@
+# Source files
+src/
+tsconfig.json
+*.ts
+!*.d.ts
+
+# Development files
+.git/
+.gitignore
+*.test.ts
+tests/
+
+# Build artifacts
+node_modules/
+.DS_Store
+*.log
+
+# IDE files
+.vscode/
+.idea/
+
+# Bun specific
+bun.lockb
