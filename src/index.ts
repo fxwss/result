@@ -1,2 +1,1 @@
-export { Result } from "./monads/result/implementation";
-export { ok, err } from "./monads/result/operators";
+export { Result, ok, err, fromFoundation } from "./api/result";
