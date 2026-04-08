@@ -1,5 +1,7 @@
-import { Result } from "../monad/foundation";
+import { type Result, ResultBrand } from '../monad/foundation'
 
-export const isResult = <T, E>(value: any): value is Result<T, E> => {
-  return value && (value.kind === "ok" || value.kind === "err");
-};
+export const isResult = <T = unknown, E = unknown>(value: unknown): value is Result<T, E> =>
+	typeof value === 'object' &&
+	value !== null &&
+	ResultBrand in value &&
+	(value as Record<string, unknown>).kind !== undefined

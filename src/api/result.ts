@@ -1,73 +1,99 @@
-import { Result as ResultFoundation } from "../monad/foundation";
+import {
+  ResultBrand,
+  type Result as ResultFoundation,
+} from "../monad/foundation";
 import { err as err_, ok as ok_ } from "../monad/implementation";
-import { TriedToUnwrapAnNotOkResultError } from "./errors";
+import { flatMap } from "../monad/operators/flat-map";
+import { inspect as inspect_ } from "../monad/operators/inspect";
 
 // operators
 import { map } from "../monad/operators/map";
-import { flatMap } from "../monad/operators/flat-map";
 import { mapErr } from "../monad/operators/map-error";
 import { match } from "../monad/operators/match";
+import { pick as pick_ } from "../monad/operators/pick";
+import {
+  TriedToUnwrapAnNotOkResultError,
+  TriedToUnwrapErrAnOkResultError,
+} from "./errors";
 
-// utilitary
-import { try_ } from "../utilitary/try";
-import { await_ } from "../utilitary/await";
-
-type MatchParams<T, E, U> = {
+interface MatchParams<T, E, U> {
   ok: (value: T) => U;
   err: (error: E) => U;
-};
+}
 
 export interface Result<T, E> {
   readonly kind: "ok" | "err";
-  readonly value: T;
-  readonly error: E;
+  readonly value: T | undefined;
+  readonly error: E | undefined;
 
-  map<U>(fn: (value: T) => U): Result<U, E>;
-  flatMap<U, F>(fn: (value: T) => Result<U, F>): Result<U, E | F>;
-  mapErr<F>(fn: (error: E) => F): Result<T, F>;
-  match<U>(handlers: MatchParams<T, E, U>): U;
-  unwrap(): T;
-  unwrapOr(defaultValue: T): T;
-  isOk(): this is Result<T, never>;
-  isErr(): this is Result<never, E>;
-
-  // static
-  try<U>(fn: () => U): Result<U, Error>;
-  await<U>(promise: Promise<U>): Promise<Result<U, Error>>;
+  map: <U>(fn: (value: T) => U) => Result<U, E>;
+  flatMap: <U, F>(fn: (value: T) => Result<U, F>) => Result<U, E | F>;
+  mapErr: <F>(fn: (error: E) => F) => Result<T, F>;
+  inspect: (fn: (value: T) => void) => Result<T, E>;
+  pick: <K extends keyof T>(key: K) => Result<T[K], E>;
+  match: <U>(handlers: MatchParams<T, E, U>) => U;
+  unwrap: () => T;
+  unwrapOr: (defaultValue: T) => T;
+  unwrapErr: () => E;
+  isOk: () => this is OkResult<T, E>;
+  isErr: () => this is ErrResult<T, E>;
 
   // interop (functional world)
-  toFoundation(): ResultFoundation<T, E>;
-  fromFoundation(result: ResultFoundation<T, E>): Result<T, E>;
+  toFoundation: () => ResultFoundation<T, E>;
+}
+
+export interface OkResult<T, E> extends Result<T, E> {
+  readonly kind: "ok";
+  readonly value: T;
+  readonly error: never;
+}
+
+export interface ErrResult<T, E> extends Result<T, E> {
+  readonly kind: "err";
+  readonly value: never;
+  readonly error: E;
 }
 
 class ResultImpl<T, E> implements Result<T, E> {
-  constructor(private result: ResultFoundation<T, E>) {}
+  readonly [ResultBrand] = true;
+  readonly kind: "ok" | "err";
+  private readonly result: ResultFoundation<T, E>;
 
-  get kind() {
-    return this.result.kind;
+  constructor(result: ResultFoundation<T, E>) {
+    this.result = result;
+    this.kind = result.kind;
   }
 
-  get value() {
-    return this.result.value;
+  get value(): T | undefined {
+    return this.result.kind === "ok" ? this.result.value : undefined;
   }
 
-  get error() {
-    return this.result.error;
+  get error(): E | undefined {
+    return this.result.kind === "err" ? this.result.error : undefined;
   }
 
   map<U>(fn: (value: T) => U): Result<U, E> {
-    return new ResultImpl(map(this.result, fn)) as Result<U, E>;
+    return wrap(map(this.result, fn));
   }
 
   flatMap<U, F>(fn: (value: T) => Result<U, F>): Result<U, E | F> {
     const mapped = flatMap<T, U, E, F>(this.result, (v) =>
-      fn(v).toFoundation()
+      fn(v).toFoundation(),
     );
-    return new ResultImpl(mapped) as Result<U, E | F>;
+    return wrap(mapped);
   }
 
   mapErr<F>(fn: (error: E) => F): Result<T, F> {
-    return new ResultImpl(mapErr(this.result, fn)) as Result<T, F>;
+    return wrap(mapErr(this.result, fn));
+  }
+
+  inspect(fn: (value: T) => void): Result<T, E> {
+    inspect_(this.result, fn);
+    return this;
+  }
+
+  pick<K extends keyof T>(key: K): Result<T[K], E> {
+    return wrap(pick_(this.result, key));
   }
 
   match<U>(handlers: MatchParams<T, E, U>): U {
@@ -85,44 +111,65 @@ class ResultImpl<T, E> implements Result<T, E> {
     return this.result.kind === "ok" ? this.result.value : defaultValue;
   }
 
-  isOk(): this is Result<T, never> {
+  unwrapErr(): E {
+    if (this.result.kind === "ok") {
+      throw new TriedToUnwrapErrAnOkResultError();
+    }
+    return this.result.error;
+  }
+
+  isOk(): this is OkResult<T, E> {
     return this.result.kind === "ok";
   }
 
-  isErr(): this is Result<never, E> {
+  isErr(): this is ErrResult<T, E> {
     return this.result.kind === "err";
-  }
-
-  // static
-  try<U>(fn: () => U): Result<U, Error> {
-    return new ResultImpl(try_<U, Error>(fn));
-  }
-
-  async await<U>(promise: Promise<U>): Promise<Result<U, Error>> {
-    const awaited = await await_(promise);
-    return new ResultImpl(awaited);
   }
 
   // interop (functional world)
   toFoundation(): ResultFoundation<T, E> {
     return this.result;
   }
+}
 
-  fromFoundation(result: ResultFoundation<T, E>): Result<T, E> {
-    return new ResultImpl(result);
+function wrap<T, E>(result: ResultFoundation<T, E>): Result<T, E> {
+  return new ResultImpl(result);
+}
+
+function dealWithError<T>(error: unknown): Result<T, Error> {
+  if (error instanceof Error) {
+    return err(error);
+  }
+
+  if (typeof error === "string") {
+    return err(new Error(error));
+  }
+
+  return err(new Error("Unknown error"));
+}
+
+export const ok = <T, E = never>(value: T): Result<T, E> =>
+  new ResultImpl(ok_(value));
+
+export const err = <T = never, E = unknown>(error: E): Result<T, E> =>
+  new ResultImpl(err_(error));
+
+export function try_<T>(fn: () => T): Result<T, Error> {
+  try {
+    return ok(fn());
+  } catch (error) {
+    return dealWithError(error);
   }
 }
 
-export const ok = <T, E = never>(value: T): Result<T, E> => {
-  return new ResultImpl(ok_(value));
-};
-
-export const err = <T = never, E = unknown>(error: E): Result<T, E> => {
-  return new ResultImpl(err_(error));
-};
+export function await_<T>(promise: Promise<T>): Promise<Result<T, Error>> {
+  return new Promise((resolve) => {
+    promise
+      .then((value) => resolve(ok(value)))
+      .catch((error) => resolve(dealWithError(error)));
+  });
+}
 
 export const fromFoundation = <T, E>(
-  result: ResultFoundation<T, E>
-): Result<T, E> => {
-  return new ResultImpl(result);
-};
+  result: ResultFoundation<T, E>,
+): Result<T, E> => new ResultImpl(result);

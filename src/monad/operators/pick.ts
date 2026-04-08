@@ -1,14 +1,14 @@
 import type { Result } from "../foundation";
 import { err, ok } from "../implementation";
 
-// map: Result<A, E> + (A => B) => Result<B, E>
-export const map = <T, U, E = Error>(
+// pick: Result<A, E> + keyof A => Result<A[K], E>
+export const pick = <T, K extends keyof T, E>(
   result: Result<T, E>,
-  fn: (value: T) => U,
-): Result<U, E> => {
+  key: K,
+): Result<T[K], E> => {
   if (result.kind === "err") {
     return err<E>(result.error);
   }
 
-  return ok(fn(result.value));
+  return ok(result.value[key]);
 };

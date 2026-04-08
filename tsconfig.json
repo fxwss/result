@@ -6,11 +6,13 @@
     "module": "ESNext",
     "moduleDetection": "force",
     "allowJs": true,
+    "types": ["bun"],
 
     // Library mode
     "moduleResolution": "bundler",
     "declaration": true,
     "declarationMap": true,
+    "rootDir": "./src",
     "outDir": "./dist",
 
     // Best practices

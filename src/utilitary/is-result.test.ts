@@ -1,5 +1,5 @@
-import { describe, test, expect } from "bun:test";
-
+import { describe, expect, test } from "bun:test";
+import { err as errApi, ok as okApi } from "../api/result";
 import { err, ok } from "../monad/implementation";
 import { isResult } from "./is-result";
 
@@ -11,6 +11,16 @@ describe("is-result", () => {
 
   test("should identify an Err result", () => {
     const result = err("error");
+    expect(isResult(result)).toBe(true);
+  });
+
+  test("should identify an API Ok result", () => {
+    const result = okApi(42);
+    expect(isResult(result)).toBe(true);
+  });
+
+  test("should identify an API Err result", () => {
+    const result = errApi("error");
     expect(isResult(result)).toBe(true);
   });
 

@@ -1,36 +1,41 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from 'bun:test'
 
-import { err, ok } from "../implementation";
-import { map } from "../operators/map";
-import { isResult } from "../../utilitary/is-result";
+import { err, ok } from '../implementation'
+import { map } from '../operators/map'
 
-describe("map operator", () => {
-  test("should map an Ok result", () => {
-    const result = ok(2);
-    const mapped = map(result, (x) => ok(x * 2));
+describe('map operator', () => {
+	test('should map an Ok result', () => {
+		const result = ok(2)
+		const mapped = map(result, (x) => x * 2)
 
-    expect(mapped.kind).toBe("ok");
-    expect(isResult(mapped.value)).toBe(true);
-    expect(mapped.value.value).toBe(4);
-  });
+		expect(mapped.kind).toBe('ok')
+		expect(mapped.value).toBe(4)
+	})
 
-  test("should not map an Err result", () => {
-    const result = err("error");
-    const mapped = map(result, (x: number) => x * 2);
+	test('should wrap result if fn returns Result', () => {
+		const result = ok(2)
+		const mapped = map(result, (x) => ok(x * 2))
 
-    expect(mapped.kind).toBe("err");
-    expect(mapped.error).toBe("error");
-  });
+		expect(mapped.kind).toBe('ok')
+		// map doesn't flatten — the value is the Result itself
+		expect(mapped.value).toEqual(ok(4))
+	})
 
-  test("should handle exceptions in the mapping function", () => {
-    const result = ok(2);
+	test('should not map an Err result', () => {
+		const result = err('error')
+		const mapped = map(result, (x: number) => x * 2)
 
-    const mapped = map<number, Error>(result, (x) => {
-      throw new Error("mapping error");
-    });
+		expect(mapped.kind).toBe('err')
+		expect(mapped.error).toBe('error')
+	})
 
-    expect(mapped.kind).toBe("err");
-    expect(Error.isError(mapped.error)).toBe(true);
-    expect(mapped.error.message).toBe("mapping error");
-  });
-});
+	test('should propagate exceptions in the mapping function', () => {
+		const result = ok(2)
+
+		expect(() =>
+			map(result, (_x) => {
+				throw new Error('mapping error')
+			}),
+		).toThrow('mapping error')
+	})
+})

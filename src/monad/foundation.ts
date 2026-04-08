@@ -1,13 +1,17 @@
-export type OkResult<T> = {
-  readonly kind: "ok";
-  readonly value: T;
-  readonly error: never;
-};
+export const ResultBrand: unique symbol = Symbol('Result')
 
-export type ErrResult<E> = {
-  readonly kind: "err";
-  readonly value: never;
-  readonly error: E;
-};
+export interface OkResult<T> {
+	readonly [ResultBrand]: true
+	readonly kind: 'ok'
+	readonly value: T
+	readonly error?: never
+}
 
-export type Result<T, E> = OkResult<T> | ErrResult<E>;
+export interface ErrResult<E> {
+	readonly [ResultBrand]: true
+	readonly kind: 'err'
+	readonly value?: never
+	readonly error: E
+}
+
+export type Result<T, E> = OkResult<T> | ErrResult<E>
