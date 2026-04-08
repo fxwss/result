@@ -64,12 +64,20 @@ class ResultImpl<T, E> implements Result<T, E> {
     this.kind = result.kind;
   }
 
-  get value(): T | undefined {
-    return this.result.kind === "ok" ? this.result.value : undefined;
+  get value(): T {
+    if (this.result.kind === "err") {
+      throw new TriedToUnwrapAnNotOkResultError();
+    }
+
+    return this.result.value;
   }
 
-  get error(): E | undefined {
-    return this.result.kind === "err" ? this.result.error : undefined;
+  get error(): E {
+    if (this.result.kind === "ok") {
+      throw new TriedToUnwrapErrAnOkResultError();
+    }
+
+    return this.result.error;
   }
 
   map<U>(fn: (value: T) => U): Result<U, E> {
@@ -152,7 +160,7 @@ export const ok = <T, E = never>(value: T): Result<T, E> =>
   new ResultImpl(ok_(value));
 
 export const err = <T = never, E = unknown>(error: E): Result<T, E> =>
-  new ResultImpl(err_(error));
+  new ResultImpl<T, E>(err_<E, T>(error));
 
 export function try_<T>(fn: () => T): Result<T, Error> {
   try {
