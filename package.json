@@ -1,6 +1,6 @@
 {
   "name": "@fxwss/result",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "A TypeScript Result monad library for error handling",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
