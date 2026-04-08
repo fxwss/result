@@ -23,8 +23,8 @@ interface MatchParams<T, E, U> {
 
 export interface Result<T, E> {
   readonly kind: "ok" | "err";
-  readonly value: T | undefined;
-  readonly error: E | undefined;
+  readonly value: T;
+  readonly error: E;
 
   map: <U>(fn: (value: T) => U) => Result<U, E>;
   flatMap: <U, F>(fn: (value: T) => Result<U, F>) => Result<U, E | F>;
